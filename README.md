@@ -1,3 +1,1 @@
 snippets and examples for C++'s SFINAE, move semantics, multithreading, ...
-
-check out https://www.youtube.com/playlist?list=PL4_hYwCyhAvY2dY_tnTv3-TJThzcloCvM
