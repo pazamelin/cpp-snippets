@@ -16,7 +16,7 @@ private:
 
     template <typename U, typename = decltype(std::cout << std::declval<U>())>
     static constexpr bool
-    check(U*) noexcept
+    check(nullptr_t) noexcept
     {
         return true;
     }
@@ -44,7 +44,7 @@ private:
     static constexpr decltype(std::begin(std::declval<U>()),
                               std::end(std::declval<U>()),
                               bool())
-    check(U*) noexcept
+    check(nullptr_t) noexcept
     {
         return true;
     }
@@ -132,7 +132,7 @@ std::ostream& operator << (std::ostream& os, const std::vector<std::string>& obj
     return os;
 }
 
-std::ostream& operator << (std::ostream& os, std::pair<std::size_t, std::string>& obj)
+std::ostream& operator << (std::ostream& os, const std::pair<std::size_t, std::string>& obj)
 {
     return os;
 }
@@ -201,7 +201,6 @@ int main()
         print(obj_not_printable);
     }
 
-    // TODO: doesn't work properly with std::pair somehow
     return 0;
 }
 
