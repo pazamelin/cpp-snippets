@@ -30,7 +30,7 @@ namespace my
     template <typename T>
     template <typename InputIt>
     vector<T>::vector(InputIt first, InputIt last)
-        : m_size{std::distance(first, last)}
+        : m_size{static_cast<std::size_t>(std::distance(first, last))}
         , m_capacity{m_size}
         , m_data{static_cast<T*>(::operator new(sizeof(T) * m_capacity))}
     {
@@ -164,14 +164,7 @@ namespace my
     template <typename T>
     constexpr const T& vector<T>::at(size_type pos) const
     {
-        if (pos >= 0 && pos < m_size)
-        {
-            return m_data[pos];
-        }
-        else
-        {
-            throw std::out_of_range("");
-        }
+        return (const_cast<vector<T>*>(this))->at(pos);
     }
 
     template <typename T>
@@ -183,7 +176,7 @@ namespace my
     template <typename T>
     constexpr const T& vector<T>::operator [] (size_type pos) const
     {
-        return m_data[pos];
+        return (const_cast<vector<T>*>(this))->operator[](pos);
     }
 
     template <typename T>
@@ -195,7 +188,7 @@ namespace my
     template <typename T>
     constexpr const T& vector<T>::front() const
     {
-        return m_data[0];
+        return (const_cast<vector<T>*>(this))->front();
     }
 
     template <typename T>
@@ -207,7 +200,7 @@ namespace my
     template <typename T>
     constexpr const T& vector<T>::back() const
     {
-        return m_data[m_size - 1];
+        return (const_cast<vector<T>*>(this))->back();
     }
 
     template <typename T>
@@ -219,7 +212,7 @@ namespace my
     template <typename T>
     constexpr const T* vector<T>::data() const noexcept
     {
-        return m_data;
+        return (const_cast<vector<T>*>(this))->data();
     }
 
     ///////////////////
