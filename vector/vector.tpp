@@ -1,3 +1,7 @@
+#include <iterator>
+#include <exception>
+#include <new>
+
 namespace my
 {
     //////////////////////
@@ -15,11 +19,11 @@ namespace my
     constexpr vector<T>::vector(std::size_t count, const T& value)
         : m_size{count}
         , m_capacity{count}
-        , m_data{new T[count]}
+        , m_data{static_cast<T*>(::operator new(sizeof(T) * m_capacity))}
     {
         for (size_type i = 0; i < m_size; i++)
         {
-            m_data[i] = value;
+            new(m_data + i) T(value);
         }
     }
 
@@ -28,12 +32,13 @@ namespace my
     vector<T>::vector(InputIt first, InputIt last)
         : m_size{std::distance(first, last)}
         , m_capacity{m_size}
-        , m_data{new T[m_size]}
+        , m_data{static_cast<T*>(::operator new(sizeof(T) * m_capacity))}
     {
         size_type i = 0;
         for(; first != last; first++)
         {
-            m_data[i++] = *first;
+            new(m_data + i) T(*first);
+            i++;
         }
     }
 
@@ -41,11 +46,11 @@ namespace my
     constexpr vector<T>::vector(const vector<T>& other)
         : m_size{other.m_size}
         , m_capacity{m_size}
-        , m_data{new T[m_size]}
+        , m_data{static_cast<T*>(::operator new(sizeof(T) * m_capacity))}
     {
         for (size_type i = 0; i < m_size; i++)
         {
-            m_data[i] = other.m_data[i];
+            new(m_data + i) T(other.m_data[i]);
         }
     }
 
@@ -64,12 +69,13 @@ namespace my
     constexpr vector<T>::vector(std::initializer_list<T> init)
             : m_size{init.size()}
             , m_capacity{m_size}
-            , m_data{new T[m_size]}
+            , m_data{static_cast<T*>(::operator new(sizeof(T) * m_capacity))}
     {
         size_type i = 0;
         for(auto it = init.begin(); it != init.end(); it++)
         {
-            m_data[i++] = std::move(*it);
+            new(m_data + i) T(std::move(*it));
+            i++;
         }
     }
 
@@ -92,15 +98,7 @@ namespace my
     {
         if (this != &other)
         {
-            delete[] this->m_data;
-            this->m_data = new T[other.m_capacity];
-            for (size_type i = 0; i < other.m_size; i++)
-            {
-                this->m_data[i] = other.m_data[i];
-            }
-
-            this->m_size = other.m_size;
-            this->m_capacity = other.m_capacity;
+            *this = vector<T>{other};
         }
     }
 
@@ -109,7 +107,11 @@ namespace my
     {
         if (this != &other)
         {
-            delete[] this->m_data;
+            for (std::size_t i = 0; i < m_size; i++)
+            {
+                m_data[i].~T();
+            }
+            operator delete(m_data);
 
             this->m_data = other.m_data;
             this->m_size = other.m_size;
@@ -119,18 +121,26 @@ namespace my
             other.m_data = 0;
             other.m_capacity = 0;
         }
+
+        return *this;
     }
 
     template <typename T>
     constexpr vector<T>& vector<T>::operator = (std::initializer_list<T> init)
     {
-        delete[] this->m_data;
-        m_data = new T[init.size()];
+        for (std::size_t i = 0; i < m_size; i++)
+        {
+            m_data[i].~T();
+        }
+        operator delete(m_data);
+
+        m_data = static_cast<T*>(::operator new(sizeof(T) * init.size()));
 
         size_type i = 0;
         for (auto it = init.begin(); it != init.end(); it++)
         {
-            m_data[i++] = std::move(*it);
+            new(m_data + i) T(std::move(*it));
+            i++;
         }
     }
 
@@ -273,13 +283,14 @@ namespace my
     {
         if (m_capacity < new_cap)
         {
-            T* data_tmp = new T[new_cap];
+            T* data_tmp = static_cast<T*>(::operator new(sizeof(T) * new_cap));
             for (size_type i = 0; i < m_size; i++)
             {
-                data_tmp[i] = m_data[i];
+                new (data_tmp + i) T(std::move(*(m_data + i)));
+                m_data[i].~T();
             }
 
-            delete[] m_data;
+            operator delete(m_data);
             m_data = data_tmp;
             m_capacity = new_cap;
         }
@@ -300,13 +311,14 @@ namespace my
         }
         else if (m_size < m_capacity)
         {
-            T* data_tmp = new T[m_size];
+            T* data_tmp = static_cast<T*>(::operator new(sizeof(T) * m_size));
             for (size_type i = 0; i < m_size; i++)
             {
-                data_tmp[i] = std::move(m_data[i]);
+                new(data_tmp + i) T(std::move(m_data[i]));
+                m_data[i].~T();
             }
 
-            delete[] m_data;
+            operator delete(m_data);
             m_data = data_tmp;
         }
 
@@ -320,7 +332,12 @@ namespace my
     template <typename T>
     constexpr void vector<T>::clear() noexcept
     {
-        delete[] m_data;
+        for (std::size_t i = 0; i < m_size; i++)
+        {
+            m_data[i].~T();
+        }
+        operator delete(m_data);
+
         m_data = nullptr;
         m_size = 0;
         m_capacity = 0;
@@ -328,17 +345,19 @@ namespace my
 
     template <typename T>
     constexpr void vector<T>::push_back(const T& value)
-    {
+    {   // TODO REF: replace with call to && version?
         if (m_size >= m_capacity)
         {
             size_type new_capacity = (m_capacity == 0) ? 1 : new_capacity * 2;
-            T* data_tmp = new T[new_capacity];
+            T* data_tmp = static_cast<T*>(::operator new(sizeof(T) * new_capacity));
+
             for (size_type i = 0; i < m_size; i++)
             {
-                data_tmp[i] = std::move(m_data[i]);
+                new(data_tmp + i) T(std::move(m_data[i]));
+                m_data[i].~T();
             }
 
-            delete[] m_data;
+            operator delete(m_data);
             m_data = data_tmp;
             m_capacity = new_capacity;
         }
@@ -353,13 +372,15 @@ namespace my
         if (m_size >= m_capacity)
         {
             size_type new_capacity = (m_capacity == 0) ? 1 : new_capacity * 2;
-            T* data_tmp = new T[new_capacity];
+            T* data_tmp = static_cast<T*>(::operator new(sizeof(T) * new_capacity));
+
             for (size_type i = 0; i < m_size; i++)
             {
-                data_tmp[i] = std::move(m_data[i]);
+                new(data_tmp + i) T(std::move(m_data[i]));
+                m_data[i].~T();
             }
 
-            delete[] m_data;
+            operator delete(m_data);
             m_data = data_tmp;
             m_capacity = new_capacity;
         }
@@ -383,14 +404,15 @@ namespace my
             {
 
                 m_capacity = m_capacity / 2;
-                T* data_tmp = new T[m_capacity];
+                T* data_tmp = static_cast<T*>(::operator new(sizeof(T) * m_capacity));
 
                 for (size_type i = 0; i < m_size - 1; i++)
                 {
-                    data_tmp[i] = std::move(m_data[i]);
+                    new(data_tmp + i) T(std::move(m_data[i]));
+                    m_data[i].~T();
                 }
 
-                delete[] m_data;
+                operator delete(m_data);
                 m_data = data_tmp;
                 m_size--;
             }
@@ -407,25 +429,27 @@ namespace my
     {
         if (m_size > count)
         {
-            T* data_tmp = new T[count];
+            T* data_tmp = static_cast<T*>(::operator new(sizeof(T) * count));
 
             for (size_type i = 0; i < count; i++)
             {
-                data_tmp[i] = std::move(m_data[i]);
+                new(data_tmp + i) T(std::move(m_data[i]));
+                m_data[i].~T();
             }
 
-            delete[] m_data;
+            operator delete(m_data);
             m_data = data_tmp;
             m_size = count;
             m_capacity = count;
         }
         else if (m_size < count)
         {
-            T* data_tmp = new T[count];
+            T* data_tmp = static_cast<T*>(::operator new(sizeof(T) * count));
 
             for (size_type i = 0; i < m_size; i++)
             {
-                data_tmp[i] = std::move(m_data[i]);
+                new(data_tmp + i) T(std::move(m_data[i]));
+                m_data[i].~T();
             }
 
             for (size_type i = m_size; i < count; i++)
@@ -433,7 +457,7 @@ namespace my
                 data_tmp[i] = value;
             }
 
-            delete[] m_data;
+            operator delete(m_data);
             m_data = data_tmp;
             m_size = count;
             m_capacity = count;
@@ -448,4 +472,4 @@ namespace my
         std::swap(this->data, other.data);
     }
 
-}
+} // namespace my

@@ -1,7 +1,9 @@
+#ifndef MY_VECTOR_HPP
+#define MY_VECTOR_HPP
+
 #include <utility>
-#include <exception>
-#include <iterator>
-#include <type_traits>
+#include <cstddef>
+#include <initializer_list>
 
 namespace my
 {
@@ -118,6 +120,9 @@ namespace my
         size_type m_capacity;
         T* m_data;
     };
-}
+
+} // namespace my
 
 #include "vector.tpp"
+
+#endif // MY_VECTOR_HPP
