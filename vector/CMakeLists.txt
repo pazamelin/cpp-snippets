@@ -6,7 +6,7 @@ project(
         LANGUAGES CXX)
 
 # Optionally set things like CMAKE_CXX_STANDARD, CMAKE_POSITION_INDEPENDENT_CODE here
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -16,7 +16,7 @@ SET(SRC)
 add_library(vector INTERFACE)
 
 # Build options
-option(CMAKE_BUILD_TYPE "build type" "Debug")
+SET(CMAKE_BUILD_TYPE Debug)
 option(BUILD_TESTS "build tests executables" ON)
 
 # Options' status
@@ -28,7 +28,7 @@ enable_testing()
 find_package(Catch2 REQUIRED)
 
 macro(register_test TEST_NAME)
-    if(CMAKE_BUILD_TYPE MATCHES "Debug")
+    if(BUILD_TESTS)
         # Tests need to be added as executables first
         add_executable(${TEST_NAME} ${TEST_NAME}.cpp)
 

@@ -338,25 +338,8 @@ namespace my
 
     template <typename T>
     constexpr void vector<T>::push_back(const T& value)
-    {   // TODO REF: replace with call to && version?
-        if (m_size >= m_capacity)
-        {
-            size_type new_capacity = (m_capacity == 0) ? 1 : new_capacity * 2;
-            T* data_tmp = static_cast<T*>(::operator new(sizeof(T) * new_capacity));
-
-            for (size_type i = 0; i < m_size; i++)
-            {
-                new(data_tmp + i) T(std::move(m_data[i]));
-                m_data[i].~T();
-            }
-
-            operator delete(m_data);
-            m_data = data_tmp;
-            m_capacity = new_capacity;
-        }
-
-        m_data[m_size] = value;
-        m_size++;
+    {
+        this->push_back(T{value});
     }
 
     template <typename T>
